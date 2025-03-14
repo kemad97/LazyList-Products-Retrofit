@@ -1,144 +1,204 @@
 package com.example.lazylistproducts
 
-
-import android.content.Context
-import android.os.Build
 import android.os.Bundle
-import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.annotation.RequiresApi
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.livedata.observeAsState
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.unit.dp
-import androidx.lifecycle.lifecycleScope
-import androidx.work.OneTimeWorkRequestBuilder
-import androidx.work.OutOfQuotaPolicy
-import androidx.work.WorkInfo
-import androidx.work.WorkManager
-import coil.compose.rememberImagePainter
-import com.example.FetchProductsWorker
-import com.example.Product
-import com.example.ProductResponse
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import androidx.work.*
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
-import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
+import java.util.concurrent.TimeUnit
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.outlined.Star
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.dp
+import coil.compose.rememberImagePainter
 
 class MainActivity : ComponentActivity() {
-    @RequiresApi(Build.VERSION_CODES.O)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        // enableEdgeToEdge()
+
+        val workManager = WorkManager.getInstance(applicationContext)
+        val viewModel = ProductViewModel(workManager)
 
         setContent {
-            ProductListScreen()
+                ProductListScreen(viewModel)
+
         }
     }
 }
 
+class ProductViewModel(private val workManager: WorkManager) : ViewModel() {
 
+    private val _products = MutableStateFlow<List<Product>>(emptyList())
+    val products: StateFlow<List<Product>> = _products
+
+    private val _loading = MutableStateFlow(false)
+    val loading: StateFlow<Boolean> = _loading
+
+    init {
+        fetchProducts()
+    }
+
+    fun fetchProducts() {
+        val workRequest = OneTimeWorkRequestBuilder<FetchProductsWorker>()
+            .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 15, TimeUnit.SECONDS)
+            .build()
+
+        workManager.enqueueUniqueWork("FetchProductsWork", ExistingWorkPolicy.KEEP, workRequest)
+
+        workManager.getWorkInfoByIdLiveData(workRequest.id).observeForever { workInfo ->
+            viewModelScope.launch {
+                if (workInfo != null) {
+                    _loading.value = workInfo.state == WorkInfo.State.RUNNING
+                }
+
+                if (workInfo != null) {
+                    if (workInfo.state == WorkInfo.State.SUCCEEDED) {
+                        val jsonData = workInfo.outputData.getString("data")
+                        val productList: List<Product> =
+                            Gson().fromJson(jsonData, object : TypeToken<List<Product>>() {}.type)
+                        _products.value = productList
+                    }
+                }
+            }
+        }
+    }
+}
 
 @Composable
-fun ProductListScreen() {
-    val context = LocalContext.current
-    val workManager = WorkManager.getInstance(context)
-    val workRequest = OneTimeWorkRequestBuilder<FetchProductsWorker>()
-        .setExpedited(OutOfQuotaPolicy.RUN_AS_NON_EXPEDITED_WORK_REQUEST)  // ✅ Forces WorkManager to run immediately
-        .build()
-    val workInfo = workManager.getWorkInfoByIdLiveData(workRequest.id).observeAsState()
+fun ProductListScreen(viewModel: ProductViewModel) {
+    val products by viewModel.products.collectAsState()
+    val loading by viewModel.loading.collectAsState()
 
-    val products = remember { mutableStateOf<List<Product>>(emptyList()) }
+    Column(
+        modifier = Modifier.fillMaxSize().padding(16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+//    {
+//        Button(onClick = { viewModel.fetchProducts() }) {
+//            Text("Fetch Products")
+//        }
 
-    LaunchedEffect(Unit) {
-        Log.d("Proddd", "🚀 Enqueuing WorkManager request")
-        workManager.enqueue(workRequest)
-    }
+        Spacer(modifier = Modifier.height(16.dp))
 
-    LaunchedEffect(workInfo.value) {
-        if (workInfo.value?.state == WorkInfo.State.SUCCEEDED) {
-            val sharedPreferences = context.getSharedPreferences("app_prefs", Context.MODE_PRIVATE)
-
-            var productsJson: String? = null
-            var attempts = 0
-
-            // Retry reading SharedPreferences for up to 10 times
-            while (attempts < 10) {
-                productsJson = sharedPreferences.getString("products", null)
-
-                if (productsJson != null) {
-                    break
+        if (loading) {
+            CircularProgressIndicator()
+        } else {
+            LazyColumn(modifier = Modifier.fillMaxSize()) {
+                items(products) { product ->
+                    ProductItem(product)
                 }
-
-                attempts++
-                Thread.sleep(500) // Wait 500ms before trying again
-            }
-
-            if (productsJson == null) {
-                Log.e("Proddd", "❌ SharedPreferences is still empty after retries!")
-            } else {
-                Log.d("Proddd", "📦 Products JSON from SharedPreferences: $productsJson")
-
-                try {
-                    val productListType = object : TypeToken<List<Product>>() {}.type
-                    val productList: List<Product> = Gson().fromJson(productsJson, productListType)
-
-                    products.value = productList
-                    Log.d("Proddd", "✅ Loaded ${products.value.size} products from SharedPreferences")
-                } catch (e: Exception) {
-                    Log.e("ProductListScreen", "❌ Error parsing JSON: ${e.message}")
-                }
-            }
-        }
-    }
-
-    Column {
-        Text(text = "Product List", modifier = Modifier.padding(16.dp))
-
-        LazyColumn {
-            items(products.value) { product ->
-                ProductItem(product)
             }
         }
     }
 }
-
 
 @Composable
 fun ProductItem(product: Product) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(16.dp)
+    Card(
+        modifier = Modifier.fillMaxWidth().padding(8.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
     ) {
-        Image(
-            painter = rememberImagePainter(data = product.thumbnail),
-            contentDescription = product.title,
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(180.dp)
-        )
+        Row(modifier = Modifier.padding(16.dp)) {
+            Image(
+                painter = rememberImagePainter(product.thumbnail),
+                contentDescription = product.title,
+                modifier = Modifier.size(80.dp)
+            )
 
-        Spacer(modifier = Modifier.height(8.dp))
-        Text(text = product.title)
-        Text(text = product.description)
-        Text(text = "Price: $${product.price}")
+            Spacer(modifier = Modifier.width(8.dp))
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp)
+            ) {
+                Text(
+                    text = product.title,
+                    style = MaterialTheme.typography.headlineSmall,
+                    color = MaterialTheme.colorScheme.primary
+                )
+
+                Spacer(modifier = Modifier.height(6.dp))
+
+                Text(
+                    text = product.description,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 3
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Text(
+                    text = "Brand: ${product.brand}",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.secondary
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Text(
+                    text = "Price: $${product.price}",
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.tertiary
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                RatingStars(rating = product.rating)
+            }
+
+        }
     }
 }
+@Composable
+fun RatingStars(rating: Double) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        val fullStars = rating.toInt()
+        val hasHalfStar = rating - fullStars >= 0.5
+        val totalStars = 5 // Total max stars
 
+        repeat(fullStars) {
+            Icon(
+                imageVector = Icons.Filled.Star,
+                contentDescription = "Star",
+                tint = Color(0xFFFFD700),
+                modifier = Modifier.size(20.dp)
+            )
+        }
 
+        if (hasHalfStar) {
+            Icon(
+                imageVector = Icons.Outlined.Star,
+                contentDescription = "Half Star",
+                tint = Color(0xFFFFD700),
+                modifier = Modifier.size(20.dp)
+            )
+        }
+
+        repeat(totalStars - fullStars - if (hasHalfStar) 1 else 0) {
+            Icon(
+                imageVector = Icons.Outlined.Star,
+                contentDescription = "Empty Star",
+                tint = Color.Gray,
+                modifier = Modifier.size(20.dp)
+            )
+        }
+    }
+}

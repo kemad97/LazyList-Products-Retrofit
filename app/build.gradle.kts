@@ -59,7 +59,8 @@ dependencies {
     implementation (libs.logging.interceptor)
 
     //Work Manager
-    implementation (libs.androidx.work.runtime.ktx)
+    implementation (libs.androidx.work.runtime.ktx.v271)
+
 
     //Glide
     implementation (libs.compose)
