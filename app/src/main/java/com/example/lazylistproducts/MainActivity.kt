@@ -61,7 +61,6 @@ class ProductViewModel(private val workManager: WorkManager) : ViewModel() {
         workManager.enqueueUniqueWork("FetchProductsWork", ExistingWorkPolicy.KEEP, workRequest)
 
         workManager.getWorkInfoByIdLiveData(workRequest.id).observeForever { workInfo ->
-            viewModelScope.launch {
                 if (workInfo != null) {
                     _loading.value = workInfo.state == WorkInfo.State.RUNNING
                 }
@@ -74,7 +73,7 @@ class ProductViewModel(private val workManager: WorkManager) : ViewModel() {
                         _products.value = productList
                     }
                 }
-            }
+
         }
     }
 }
@@ -86,7 +85,8 @@ fun ProductListScreen(viewModel: ProductViewModel) {
 
     Column(
         modifier = Modifier.fillMaxSize().padding(16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
         ) {
 //    {
 //        Button(onClick = { viewModel.fetchProducts() }) {
@@ -161,44 +161,10 @@ fun ProductItem(product: Product) {
 
                 Spacer(modifier = Modifier.height(8.dp))
 
-                RatingStars(rating = product.rating)
             }
 
         }
     }
 }
-@Composable
-fun RatingStars(rating: Double) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        val fullStars = rating.toInt()
-        val hasHalfStar = rating - fullStars >= 0.5
-        val totalStars = 5 // Total max stars
 
-        repeat(fullStars) {
-            Icon(
-                imageVector = Icons.Filled.Star,
-                contentDescription = "Star",
-                tint = Color(0xFFFFD700),
-                modifier = Modifier.size(20.dp)
-            )
-        }
 
-        if (hasHalfStar) {
-            Icon(
-                imageVector = Icons.Outlined.Star,
-                contentDescription = "Half Star",
-                tint = Color(0xFFFFD700),
-                modifier = Modifier.size(20.dp)
-            )
-        }
-
-        repeat(totalStars - fullStars - if (hasHalfStar) 1 else 0) {
-            Icon(
-                imageVector = Icons.Outlined.Star,
-                contentDescription = "Empty Star",
-                tint = Color.Gray,
-                modifier = Modifier.size(20.dp)
-            )
-        }
-    }
-}
