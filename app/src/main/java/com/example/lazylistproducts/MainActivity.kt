@@ -25,56 +25,72 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.lifecycleScope
 import coil.compose.rememberImagePainter
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
+import androidx.work.WorkManager
+import java.io.IOException
+
 
 class MainActivity : ComponentActivity() {
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        
-        setContent {
-                ProductListScreen()
 
+    var products = mutableStateOf<List<Product>>(emptyList())
+    var loading = mutableStateOf(false)
+
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+
+        super.onCreate(savedInstanceState)
+
+        lifecycleScope.launch {
+            fetchProducts()
+        }
+
+        val workRequest = OneTimeWorkRequestBuilder<FetchProductsWorker>()
+            .setBackoffCriteria(BackoffPolicy.EXPONENTIAL,30, TimeUnit.SECONDS)
+            .build()
+        WorkManager.getInstance(applicationContext).enqueueUniqueWork(
+            "FetchProductsWorker",
+            ExistingWorkPolicy.REPLACE,
+            workRequest
+        )
+
+
+        setContent {
+            ProductListScreen(products.value, loading.value)
         }
     }
+
+    private suspend fun fetchProducts() {
+        loading.value = true
+        try {
+            val response = RetrofitInstance.apiService.getProducts()
+            products.value = response.products
+        } catch (e: IOException) {  // Network error
+
+        } finally {
+            loading.value = false
+        }
+    }
+
 }
 
 
 @Composable
-fun ProductListScreen() {
-    var products = remember { mutableStateOf<List<Product>>(emptyList()) }
-    var loading = remember { mutableStateOf(false) }
-    fun fetchProducts() {
-        loading.value = true
-        RetrofitInstance.apiService.getProducts().enqueue(object : Callback<ProductResponse> {
-            override fun onResponse(call: Call<ProductResponse>, response: Response<ProductResponse>) {
-                if (response.isSuccessful) {
-                    products.value = response.body()?.products ?: emptyList()
-                }
-                loading.value = false
-            }
-
-            override fun onFailure(call: Call<ProductResponse>, t: Throwable) {
-                loading.value = false
-            }
-        })
-    }
-
-    LaunchedEffect(Unit) { fetchProducts() }
-
+fun ProductListScreen(products: List<Product>, loading: Boolean) {
     Column(
         modifier = Modifier.fillMaxSize().padding(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Spacer(modifier = Modifier.height(16.dp))
 
-        if (loading.value) {
+        if (loading) {
             CircularProgressIndicator()
         } else {
             LazyColumn(modifier = Modifier.fillMaxSize()) {
-                items(products.value) { product ->
+                items(products) { product ->
                     ProductItem(product)
                 }
             }
@@ -104,40 +120,12 @@ fun ProductItem(product: Product) {
                 Text(
                     text = product.title,
                     style = MaterialTheme.typography.headlineSmall,
-                    color = MaterialTheme.colorScheme.primary
                 )
 
                 Spacer(modifier = Modifier.height(6.dp))
 
-                Text(
-                    text = product.description,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 3
-                )
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                Text(
-                    text = "Brand: ${product.brand}",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.secondary
-                )
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                Text(
-                    text = "Price: $${product.price}",
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.tertiary
-                )
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                Spacer(modifier = Modifier.height(8.dp))
 
             }
-
         }
     }
 }

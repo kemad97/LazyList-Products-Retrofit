@@ -7,11 +7,12 @@ import retrofit2.converter.gson.GsonConverterFactory
 object RetrofitInstance {
     private const val BASE_URL = "https://dummyjson.com/"
 
-    val apiService: ApiService by lazy {
-        Retrofit.Builder()
+    private val retrofit = Retrofit.Builder()
             .baseUrl(BASE_URL)
             .addConverterFactory(GsonConverterFactory.create())
             .build()
-            .create(ApiService::class.java)
-    }
+
+val apiService: ApiService = retrofit.create(ApiService::class.java)
+
+
 }
