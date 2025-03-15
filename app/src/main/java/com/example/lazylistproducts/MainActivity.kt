@@ -33,6 +33,7 @@ import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
 import androidx.work.WorkManager
+import kotlinx.coroutines.Dispatchers
 import java.io.IOException
 
 
@@ -46,7 +47,7 @@ class MainActivity : ComponentActivity() {
 
         super.onCreate(savedInstanceState)
 
-        lifecycleScope.launch {
+        lifecycleScope.launch (Dispatchers.IO){
             fetchProducts()
         }
 
