@@ -82,7 +82,9 @@ class MainActivity : ComponentActivity() {
 fun ProductListScreen(products: List<Product>, loading: Boolean,myActivity: ComponentActivity) {
     Column(
         modifier = Modifier.fillMaxSize().padding(16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+
     ) {
         Spacer(modifier = Modifier.height(16.dp))
 
