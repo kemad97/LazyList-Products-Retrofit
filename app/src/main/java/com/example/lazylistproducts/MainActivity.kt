@@ -1,5 +1,7 @@
 package com.example.lazylistproducts
 
+import android.content.Context
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -49,7 +51,6 @@ class MainActivity : ComponentActivity() {
         }
 
         val workRequest = OneTimeWorkRequestBuilder<FetchProductsWorker>()
-            .setBackoffCriteria(BackoffPolicy.EXPONENTIAL,30, TimeUnit.SECONDS)
             .build()
         WorkManager.getInstance(applicationContext).enqueueUniqueWork(
             "FetchProductsWorker",
@@ -57,9 +58,8 @@ class MainActivity : ComponentActivity() {
             workRequest
         )
 
-
         setContent {
-            ProductListScreen(products.value, loading.value)
+            ProductListScreen(products.value, loading.value,this)
         }
     }
 
@@ -79,7 +79,7 @@ class MainActivity : ComponentActivity() {
 
 
 @Composable
-fun ProductListScreen(products: List<Product>, loading: Boolean) {
+fun ProductListScreen(products: List<Product>, loading: Boolean,myActivity: ComponentActivity) {
     Column(
         modifier = Modifier.fillMaxSize().padding(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally
@@ -91,7 +91,7 @@ fun ProductListScreen(products: List<Product>, loading: Boolean) {
         } else {
             LazyColumn(modifier = Modifier.fillMaxSize()) {
                 items(products) { product ->
-                    ProductItem(product)
+                    ProductItem(product,myActivity)
                 }
             }
         }
@@ -99,10 +99,21 @@ fun ProductListScreen(products: List<Product>, loading: Boolean) {
 }
 
 @Composable
-fun ProductItem(product: Product) {
+fun ProductItem(product: Product, myActivity: ComponentActivity) {
     Card(
         modifier = Modifier.fillMaxWidth().padding(8.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+        onClick={
+            val intent = Intent(myActivity, DetailsActivity::class.java).apply {
+                putExtra("title", product.title)
+                putExtra("description", product.description)
+                putExtra("price", product.price)
+                putExtra("brand", product.brand)
+                putExtra("image", product.thumbnail)
+            }
+            myActivity.startActivity(intent)
+        }
+
     ) {
         Row(modifier = Modifier.padding(16.dp)) {
             Image(
