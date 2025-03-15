@@ -26,80 +26,55 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import coil.compose.rememberImagePainter
+import retrofit2.Call
+import retrofit2.Callback
+import retrofit2.Response
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
-        val workManager = WorkManager.getInstance(applicationContext)
-        val viewModel = ProductViewModel(workManager)
-
+        
         setContent {
-                ProductListScreen(viewModel)
+                ProductListScreen()
 
         }
     }
 }
 
-class ProductViewModel(private val workManager: WorkManager) : ViewModel() {
-
-    private val _products = MutableStateFlow<List<Product>>(emptyList())
-    val products: StateFlow<List<Product>> = _products
-
-    private val _loading = MutableStateFlow(false)
-    val loading: StateFlow<Boolean> = _loading
-
-    init {
-        fetchProducts()
-    }
-
-    fun fetchProducts() {
-        val workRequest = OneTimeWorkRequestBuilder<FetchProductsWorker>()
-            .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 15, TimeUnit.SECONDS)
-            .build()
-
-        workManager.enqueueUniqueWork("FetchProductsWork", ExistingWorkPolicy.KEEP, workRequest)
-
-        workManager.getWorkInfoByIdLiveData(workRequest.id).observeForever { workInfo ->
-                if (workInfo != null) {
-                    _loading.value = workInfo.state == WorkInfo.State.RUNNING
-                }
-
-                if (workInfo != null) {
-                    if (workInfo.state == WorkInfo.State.SUCCEEDED) {
-                        val jsonData = workInfo.outputData.getString("data")
-                        val productList: List<Product> =
-                            Gson().fromJson(jsonData, object : TypeToken<List<Product>>() {}.type)
-                        _products.value = productList
-                    }
-                }
-
-        }
-    }
-}
 
 @Composable
-fun ProductListScreen(viewModel: ProductViewModel) {
-    val products by viewModel.products.collectAsState()
-    val loading by viewModel.loading.collectAsState()
+fun ProductListScreen() {
+    var products = remember { mutableStateOf<List<Product>>(emptyList()) }
+    var loading = remember { mutableStateOf(false) }
+    fun fetchProducts() {
+        loading.value = true
+        RetrofitInstance.apiService.getProducts().enqueue(object : Callback<ProductResponse> {
+            override fun onResponse(call: Call<ProductResponse>, response: Response<ProductResponse>) {
+                if (response.isSuccessful) {
+                    products.value = response.body()?.products ?: emptyList()
+                }
+                loading.value = false
+            }
+
+            override fun onFailure(call: Call<ProductResponse>, t: Throwable) {
+                loading.value = false
+            }
+        })
+    }
+
+    LaunchedEffect(Unit) { fetchProducts() }
 
     Column(
         modifier = Modifier.fillMaxSize().padding(16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
-        ) {
-//    {
-//        Button(onClick = { viewModel.fetchProducts() }) {
-//            Text("Fetch Products")
-//        }
-
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
         Spacer(modifier = Modifier.height(16.dp))
 
-        if (loading) {
+        if (loading.value) {
             CircularProgressIndicator()
         } else {
             LazyColumn(modifier = Modifier.fillMaxSize()) {
-                items(products) { product ->
+                items(products.value) { product ->
                     ProductItem(product)
                 }
             }
