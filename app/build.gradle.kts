@@ -10,7 +10,7 @@ android {
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.example.lazylistproducts"
+        applicationId = "com.example.lazylistproducts2"
         minSdk = 24
         targetSdk = 35
         versionCode = 1

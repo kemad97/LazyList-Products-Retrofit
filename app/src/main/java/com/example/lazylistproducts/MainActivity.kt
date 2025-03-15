@@ -40,44 +40,41 @@ import java.io.IOException
 class MainActivity : ComponentActivity() {
 
     var products = mutableStateOf<List<Product>>(emptyList())
-    var loading = mutableStateOf(false)
-
+    var loading = mutableStateOf(true)
 
     override fun onCreate(savedInstanceState: Bundle?) {
-
         super.onCreate(savedInstanceState)
 
-        lifecycleScope.launch (Dispatchers.IO){
-            fetchProducts()
-        }
+        val workManager = WorkManager.getInstance(applicationContext)
+        val workRequest = OneTimeWorkRequestBuilder<FetchProductsWorker>().build()
 
-        val workRequest = OneTimeWorkRequestBuilder<FetchProductsWorker>()
-            .build()
-        WorkManager.getInstance(applicationContext).enqueueUniqueWork(
+        workManager.enqueueUniqueWork(
             "FetchProductsWorker",
             ExistingWorkPolicy.REPLACE,
             workRequest
         )
 
-        setContent {
-            ProductListScreen(products.value, loading.value,this)
-        }
-    }
-
-    private suspend fun fetchProducts() {
-        loading.value = true
-        try {
-            val response = RetrofitInstance.apiService.getProducts()
-            products.value = response.products
-        } catch (e: IOException) {  // Network error
-
-        } finally {
+        lifecycleScope.launch(Dispatchers.IO) {
+            val productDao = ProductDatabase.getDatabase(applicationContext).productDao()
+            products.value = productDao.getAllProducts()
             loading.value = false
         }
+
+        workManager.getWorkInfoByIdLiveData(workRequest.id).observe(this) { workInfo ->
+            if (workInfo?.state == WorkInfo.State.SUCCEEDED) {
+                lifecycleScope.launch(Dispatchers.IO) {
+                    val productDao = ProductDatabase.getDatabase(applicationContext).productDao()
+                    products.value = productDao.getAllProducts()
+                    loading.value = false
+                }
+            }
+        }
+
+        setContent {
+            ProductListScreen(products.value, loading.value, this)
+        }
     }
-
 }
-
 
 @Composable
 fun ProductListScreen(products: List<Product>, loading: Boolean,myActivity: ComponentActivity) {
@@ -132,7 +129,7 @@ fun ProductItem(product: Product, myActivity: ComponentActivity) {
                     .padding(16.dp)
             ) {
                 Text(
-                    text = product.title,
+                    text = product.title!!,
                     style = MaterialTheme.typography.headlineSmall,
                 )
 
