@@ -1,41 +1,35 @@
 package com.example.lazylistproducts
 
+import android.content.ContentValues.TAG
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.Image
-import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
 import androidx.work.*
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.launch
-import java.util.concurrent.TimeUnit
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Star
-import androidx.compose.material.icons.outlined.Star
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import coil.compose.rememberImagePainter
-import retrofit2.Call
-import retrofit2.Callback
-import retrofit2.Response
+import java.util.UUID
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        val workManager = WorkManager.getInstance(applicationContext)
+        val request = OneTimeWorkRequestBuilder<FetchProductsWorker>().build()
+        workManager.enqueue(request)
         
         setContent {
-                ProductListScreen()
+            ProductListScreen(workManager, request.id)
 
         }
     }
@@ -43,49 +37,48 @@ class MainActivity : ComponentActivity() {
 
 
 @Composable
-fun ProductListScreen() {
+fun ProductListScreen(workManager: WorkManager, id: UUID) {
     var products = remember { mutableStateOf<List<Product>>(emptyList()) }
     var loading = remember { mutableStateOf(false) }
-    fun fetchProducts() {
-        loading.value = true
-        RetrofitInstance.apiService.getProducts().enqueue(object : Callback<ProductResponse> {
-            override fun onResponse(call: Call<ProductResponse>, response: Response<ProductResponse>) {
-                if (response.isSuccessful) {
-                    products.value = response.body()?.products ?: emptyList()
-                }
-                loading.value = false
-            }
 
-            override fun onFailure(call: Call<ProductResponse>, t: Throwable) {
-                loading.value = false
+
+    workManager.getWorkInfoByIdLiveData(id).observeForever { workInfo ->
+        if (workInfo?.state == WorkInfo.State.SUCCEEDED) {
+            workInfo.outputData.getString("data")?.let { jsonData ->
+                products.value = Gson().fromJson(jsonData, Array<Product>::class.java).toList()
+                Log.i(TAG, "ProductListScreen:  ........... + ${products.value.size}"  )
+                loading .value= false
             }
-        })
+        }
     }
 
-    LaunchedEffect(Unit) { fetchProducts() }
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Spacer(modifier = Modifier.height(16.dp))
 
-    Column(
-        modifier = Modifier.fillMaxSize().padding(16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Spacer(modifier = Modifier.height(16.dp))
-
-        if (loading.value) {
-            CircularProgressIndicator()
-        } else {
-            LazyColumn(modifier = Modifier.fillMaxSize()) {
-                items(products.value) { product ->
-                    ProductItem(product)
+            if (loading.value) {
+                CircularProgressIndicator()
+            } else {
+                LazyColumn(modifier = Modifier.fillMaxSize()) {
+                    items(products.value) { product ->
+                        ProductItem(product)
+                    }
                 }
             }
         }
     }
-}
+
 
 @Composable
 fun ProductItem(product: Product) {
     Card(
-        modifier = Modifier.fillMaxWidth().padding(8.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(8.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
     ) {
         Row(modifier = Modifier.padding(16.dp)) {
