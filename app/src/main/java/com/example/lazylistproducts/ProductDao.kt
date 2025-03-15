@@ -1,9 +1,11 @@
 package com.example.lazylistproducts
 
+import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
-import retrofit2.http.Query
+import androidx.room.Query
 
+@Dao
 interface ProductDao {
 
     @Query("SELECT * FROM products")
