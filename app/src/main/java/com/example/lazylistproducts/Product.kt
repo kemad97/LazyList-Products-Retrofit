@@ -7,7 +7,8 @@ data class ProductResponse(val products: List<Product>)
 
 @Entity(tableName = "products")
 data class Product(
-    @PrimaryKey(autoGenerate = true) val id: Int = 0,
+    @PrimaryKey(autoGenerate = true)
+    val id: Int = 0,
     val title: String? = "",
     val description: String? = "",
     val brand: String? = "",
