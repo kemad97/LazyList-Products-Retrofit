@@ -2,6 +2,7 @@ package com.example.lazylistproducts
 
 import android.content.Intent
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.Image
@@ -19,49 +20,50 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.rememberImagePainter
 
 import androidx.work.WorkManager
 import com.example.lazylistproducts.local.ProductDatabase
 import com.example.lazylistproducts.model.Product
+import com.example.lazylistproducts.remote.ApiService
+import com.example.lazylistproducts.remote.RetrofitInstance
+import com.example.lazylistproducts.repo.ProductsRepository
+import com.example.lazylistproducts.viewmodel.AllProductViewModel
+import com.example.lazylistproducts.viewmodel.FavoriteViewModel
 import kotlinx.coroutines.Dispatchers
+
+import com.example.lazylistproducts.repo.ProductRepositoryImpl
+
 
 
 class MainActivity : ComponentActivity() {
 
-    var products = mutableStateOf<List<Product>>(emptyList())
-    var loading = mutableStateOf(true)
-    val productDao = ProductDatabase.getDatabase(applicationContext).productDao()
-
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        val workManager = WorkManager.getInstance(applicationContext)
-        val workRequest = OneTimeWorkRequestBuilder<FetchProductsWorker>().build()
+        val productDao = ProductDatabase.getDatabase(this).productDao()
+        val apiService = RetrofitInstance.apiService
+        val repository = ProductRepositoryImpl(productDao, apiService)
 
-        workManager.enqueueUniqueWork(
-            "FetchProductsWorker",
-            ExistingWorkPolicy.REPLACE,
-            workRequest
-        )
+        val factory = AllProductViewModel.ProductViewModelFactory(repository)
+        val factory2 = FavoriteViewModel.FavoritesViewModelFactory(repository)
 
-        lifecycleScope.launch(Dispatchers.IO) {
-            products.value = productDao.getAllProducts()
-        }
 
-        workManager.getWorkInfoByIdLiveData(workRequest.id).observe(this) { workInfo ->
-            if (workInfo?.state == WorkInfo.State.SUCCEEDED) {
-                lifecycleScope.launch(Dispatchers.IO) {
-                    val productDao = ProductDatabase.getDatabase(applicationContext).productDao()
-                    products.value = productDao.getAllProducts()
-                    loading.value = false
-                }
-            }
-        }
 
         setContent {
-            ProductListScreen(products.value, loading.value, this)
+            val allProductViewModel: AllProductViewModel = viewModel(factory = factory)
+            val favoriteViewModel: FavoriteViewModel = viewModel(factory = factory2)
+
+            allProductViewModel.fetchProductsFromApi()
+
+
+            favoriteViewModel.getFavoriteProducts()
+
+
+
+
+
         }
     }
 }

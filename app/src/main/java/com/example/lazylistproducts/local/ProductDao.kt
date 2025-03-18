@@ -11,7 +11,7 @@ import com.example.lazylistproducts.model.Product
 interface ProductDao {
 
     @Query("SELECT * FROM products")
-    suspend fun getAllProducts(): List<Product>
+    suspend fun getAllProductsFromDatabase(): List<Product>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertProducts(product: Product)

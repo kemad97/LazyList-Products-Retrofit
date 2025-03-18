@@ -9,10 +9,10 @@ class ProductRepositoryImpl (
     private val apiService: ApiService
 ) : ProductsRepository{
     override suspend fun getProducts(): List<Product> {
-        return productDao.getAllProducts()
+        return productDao.getAllProductsFromDatabase()
     }
 
-    override suspend fun insertProducts(product: Product) {
+    override suspend fun insertProduct(product: Product) {
             return productDao.insertProducts(product)
     }
 
