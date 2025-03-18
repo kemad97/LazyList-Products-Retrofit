@@ -1,6 +1,6 @@
-package com.example.lazylistproducts
+package com.example.lazylistproducts.remote
 
-import retrofit2.Call
+import com.example.lazylistproducts.remote.ProductResponse
 import retrofit2.http.GET
 
 interface ApiService {

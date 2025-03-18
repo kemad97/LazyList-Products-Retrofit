@@ -1,9 +1,8 @@
-package com.example.lazylistproducts
+package com.example.lazylistproducts.model
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 
-data class ProductResponse(val products: List<Product>)
 
 @Entity(tableName = "products")
 data class Product(

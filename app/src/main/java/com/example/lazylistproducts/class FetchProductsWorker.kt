@@ -2,10 +2,11 @@ package com.example.lazylistproducts
 
 import android.content.Context
 import android.util.Log
-import android.widget.Toast
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import androidx.work.workDataOf
+import com.example.lazylistproducts.local.ProductDatabase
+import com.example.lazylistproducts.remote.RetrofitInstance
 import com.google.gson.Gson
 
 class FetchProductsWorker(appContext: Context, workerParams: WorkerParameters) : CoroutineWorker(appContext, workerParams) {

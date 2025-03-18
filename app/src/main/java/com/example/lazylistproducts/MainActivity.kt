@@ -1,6 +1,5 @@
 package com.example.lazylistproducts
 
-import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -23,8 +22,9 @@ import androidx.lifecycle.lifecycleScope
 import coil.compose.rememberImagePainter
 
 import androidx.work.WorkManager
+import com.example.lazylistproducts.local.ProductDatabase
+import com.example.lazylistproducts.model.Product
 import kotlinx.coroutines.Dispatchers
-import java.io.IOException
 
 
 class MainActivity : ComponentActivity() {
@@ -67,7 +67,7 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-fun ProductListScreen(products: List<Product>, loading: Boolean,myActivity: ComponentActivity) {
+fun ProductListScreen(products: List<Product>, loading: Boolean, myActivity: ComponentActivity) {
     Column(
         modifier = Modifier.fillMaxSize().padding(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally,

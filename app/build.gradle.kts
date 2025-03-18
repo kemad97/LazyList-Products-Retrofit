@@ -83,5 +83,28 @@ dependencies {
     debugImplementation(libs.androidx.ui.test.manifest)
 
 
+    /***********************************************************/
+    //Scoped API
+    implementation(libs.androidx.lifecycle.viewmodel.compose.android)
+    //Retrofit
+    implementation (libs.retrofit)
+    implementation (libs.converter.gson)
+    //Room
+    val room_version = "2.6.1"
+    implementation(libs.androidx.room.runtime)
+    // Kotlin Symbol Processing (KSP)
+    ksp(libs.androidx.room.compiler)
+    // optional - Kotlin Extensions and Coroutines support for Room
+    implementation(libs.androidx.room.ktx)
+    //Glide
+    implementation (libs.compose)
+    //LiveData & Compose
+    val compose_version = "1.0.0"
+    implementation (libs.androidx.runtime.livedata.v100)
+
+
+
+
+
 
 }
