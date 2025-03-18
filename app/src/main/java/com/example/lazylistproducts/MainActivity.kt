@@ -31,6 +31,8 @@ class MainActivity : ComponentActivity() {
 
     var products = mutableStateOf<List<Product>>(emptyList())
     var loading = mutableStateOf(true)
+    val productDao = ProductDatabase.getDatabase(applicationContext).productDao()
+
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -45,9 +47,7 @@ class MainActivity : ComponentActivity() {
         )
 
         lifecycleScope.launch(Dispatchers.IO) {
-            val productDao = ProductDatabase.getDatabase(applicationContext).productDao()
             products.value = productDao.getAllProducts()
-            loading.value = false
         }
 
         workManager.getWorkInfoByIdLiveData(workRequest.id).observe(this) { workInfo ->
