@@ -52,7 +52,6 @@ fun MainMenuScreen(activity: ComponentActivity) {
         Button(
             onClick = { activity.finish() }, // Exit App
             modifier = Modifier.fillMaxWidth().padding(8.dp),
-            colors = ButtonDefaults.buttonColors(MaterialTheme.colorScheme.error)
         ) {
             Text("Exit App")
         }
