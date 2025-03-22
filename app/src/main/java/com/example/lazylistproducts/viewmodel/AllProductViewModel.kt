@@ -35,9 +35,6 @@ class AllProductViewModel (private val repository: ProductsRepository) : ViewMod
         }
     }
 
-
-
-    // Add product to favorites (local storage)
     fun addToFavorites(product: Product) {
         viewModelScope.launch(Dispatchers.IO) {
             try {

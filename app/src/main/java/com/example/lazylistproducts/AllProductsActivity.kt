@@ -16,6 +16,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Observer
 import androidx.lifecycle.viewmodel.compose.viewModel
+import coil.compose.rememberAsyncImagePainter
 import coil.compose.rememberImagePainter
 import com.example.lazylistproducts.DetailsActivity
 import com.example.lazylistproducts.model.Product
@@ -83,7 +84,7 @@ class AllProductsActivity : ComponentActivity() {
         ) {
             Row(modifier = Modifier.padding(16.dp)) {
                 Image(
-                    painter = rememberImagePainter(product.thumbnail),
+                    painter = rememberAsyncImagePainter(product.thumbnail),
                     contentDescription = product.title,
                     modifier = Modifier.size(80.dp)
                 )
