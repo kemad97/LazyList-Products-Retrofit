@@ -3,12 +3,14 @@ package com.example.lazylistproducts.repo
 import com.example.lazylistproducts.local.ProductDao
 import com.example.lazylistproducts.model.Product
 import com.example.lazylistproducts.remote.ApiService
+import kotlinx.coroutines.flow.Flow
 
-class ProductRepositoryImpl (
+class ProductRepositoryImpl  (
     private val productDao: ProductDao,
     private val apiService: ApiService
 ) : ProductsRepository{
-    override suspend fun getProducts(): List<Product> {
+
+    override  fun getProducts(): Flow<List<Product>> {
         return productDao.getAllProductsFromDatabase()
     }
 

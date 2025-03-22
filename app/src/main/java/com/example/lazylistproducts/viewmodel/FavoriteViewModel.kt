@@ -25,7 +25,9 @@ class FavoriteViewModel  (private val repository: ProductsRepository ) : ViewMod
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 val favoriteList = repository.getProducts()
-                mutableFavorites.postValue(favoriteList)
+                favoriteList.collect {
+                    mutableFavorites.postValue(it)
+                }
                 Log.i("ViewModel", "Fetched from Database: $favoriteList")
 
             } catch (e: Exception) {
