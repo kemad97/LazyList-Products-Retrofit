@@ -18,7 +18,6 @@ import kotlinx.coroutines.launch
 class FavoriteViewModel  (private val repository: ProductsRepository ) : ViewModel()
 {
 
-
     private val _mutableFavorites= MutableStateFlow<List<Product>>(emptyList())
     val favorites: StateFlow<List<Product>> = _mutableFavorites.asStateFlow()
 

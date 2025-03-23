@@ -6,6 +6,7 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.example.lazylistproducts.Response
 import com.example.lazylistproducts.model.Product
 import com.example.lazylistproducts.repo.ProductsRepository
 import kotlinx.coroutines.Dispatchers
@@ -16,10 +17,10 @@ import kotlinx.coroutines.launch
 
 class AllProductViewModel (private val repository: ProductsRepository) : ViewModel ()
 {
-    private val mutableProducts =MutableStateFlow<List<Product>>  (emptyList() )
-    val products : StateFlow<List<Product>> = mutableProducts
+    private val _products = MutableStateFlow<Response>(Response.Loading)
+    val products: StateFlow<Response> = _products
 
-    private val mutableMessage : MutableLiveData<String> = MutableLiveData("")
+    private val mutableMessage : MutableStateFlow<String> = MutableStateFlow("")
 
     init {
         fetchProductsFromApi()
@@ -29,13 +30,13 @@ class AllProductViewModel (private val repository: ProductsRepository) : ViewMod
         viewModelScope.launch (Dispatchers.IO){
 
                 val productList = repository.fetchProductsFromApi()
-                    productList
-                    .catch { e -> mutableMessage.postValue("Error fetching products: ${e.message}") }
-                   .collect{
-                        mutableProducts.value = it
-                        Log.i("ViewModel", "Fetched from API: $productList")
-                    }
 
+                    productList
+                    .catch { e -> mutableMessage.value= e.message.toString() }
+                        .collect { prod ->
+                            _products.value = Response.Success(prod)
+                            Log.i("ViewModel", "Fetched from API: $productList")
+                        }
 
         }
     }
@@ -44,9 +45,9 @@ class AllProductViewModel (private val repository: ProductsRepository) : ViewMod
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 repository.insertProduct (product)
-                mutableMessage.postValue("Added to favorites")
+                mutableMessage.value=("Added to favorites")
             } catch (e: Exception) {
-                mutableMessage.postValue("Failed to add to favorites: ${e.message}")
+                mutableMessage.value=("Failed to add to favorites: ${e.message}")
             }
         }
     }

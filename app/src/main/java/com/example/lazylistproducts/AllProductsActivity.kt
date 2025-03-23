@@ -20,6 +20,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.rememberAsyncImagePainter
 import coil.compose.rememberImagePainter
 import com.example.lazylistproducts.DetailsActivity
+import com.example.lazylistproducts.Response
 import com.example.lazylistproducts.model.Product
 import com.example.lazylistproducts.viewmodel.AllProductViewModel
 import com.example.lazylistproducts.repo.ProductRepositoryImpl
@@ -42,15 +43,29 @@ class AllProductsActivity : ComponentActivity() {
                 viewModel.fetchProductsFromApi()
             }
 
-            val products = viewModel.products.collectAsStateWithLifecycle(emptyList())
-            ProductListScreen(products.value, this,viewModel)
+            val response = viewModel.products.collectAsStateWithLifecycle()
+            val result = response.value
 
+            when (result) {
+                is Response.Loading -> {
+                    CircularProgressIndicator()
+                }
+                is Response.Success -> {
+                    ProductListScreen(result.data, this, viewModel)
+                }
+                is Response.Failure -> {
+                    Text("Error: ${result}")
+                }
+            }
         }
     }
-}
 
     @Composable
-    fun ProductListScreen(products: List<Product>, myActivity: ComponentActivity , viewModel : AllProductViewModel) {
+    fun ProductListScreen(
+        products: List<Product>,
+        myActivity: ComponentActivity,
+        viewModel: AllProductViewModel
+    ) {
         Column(
             modifier = Modifier.fillMaxSize().padding(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
@@ -58,21 +73,25 @@ class AllProductsActivity : ComponentActivity() {
         ) {
             Spacer(modifier = Modifier.height(16.dp))
 
-                LazyColumn(modifier = Modifier.fillMaxSize()) {
-                    items(products) { product ->
-                        ProductItem(product, myActivity,viewModel)
-                    }
+            LazyColumn(modifier = Modifier.fillMaxSize()) {
+                items(products) { product ->
+                    ProductItem(product, myActivity, viewModel)
                 }
             }
         }
+    }
 
 
     @Composable
-    fun ProductItem(product: Product, myActivity: ComponentActivity , viewModel: AllProductViewModel) {
+    fun ProductItem(
+        product: Product,
+        myActivity: ComponentActivity,
+        viewModel: AllProductViewModel
+    ) {
         Card(
             modifier = Modifier.fillMaxWidth().padding(8.dp),
             elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
-            onClick={
+            onClick = {
                 val intent = Intent(myActivity, DetailsActivity::class.java).apply {
                     putExtra("title", product.title)
                     putExtra("description", product.description)
@@ -112,8 +131,9 @@ class AllProductsActivity : ComponentActivity() {
                 }
 
             }
-            }
         }
+    }
+}
 
 
 

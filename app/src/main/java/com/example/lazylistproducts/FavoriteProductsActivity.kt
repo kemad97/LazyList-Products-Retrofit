@@ -37,7 +37,6 @@ import com.example.lazylistproducts.local.ProductDatabase
 import com.example.lazylistproducts.model.Product
 import com.example.lazylistproducts.remote.RetrofitInstance.apiService
 import com.example.lazylistproducts.repo.ProductRepositoryImpl
-import com.example.lazylistproducts.ui.ProductItem
 import com.example.lazylistproducts.viewmodel.FavoriteViewModel
 
 class FavoriteProductsActivity : ComponentActivity() {
