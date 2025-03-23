@@ -9,29 +9,29 @@ import androidx.lifecycle.viewModelScope
 import com.example.lazylistproducts.model.Product
 import com.example.lazylistproducts.repo.ProductsRepository
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.launch
 
 class FavoriteViewModel  (private val repository: ProductsRepository ) : ViewModel()
 {
 
 
-    private val mutableFavorites: MutableLiveData<List<Product>> = MutableLiveData()
-    val favorites: LiveData<List<Product>> = mutableFavorites
+    private val _mutableFavorites= MutableStateFlow<List<Product>>(emptyList())
+    val favorites: StateFlow<List<Product>> = _mutableFavorites.asStateFlow()
 
-    private val mutableMessage: MutableLiveData<String> = MutableLiveData("")
-    val message: LiveData<String> = mutableMessage
+    private val _mutableMessage = MutableStateFlow("")
+    val message: StateFlow<String> = _mutableMessage.asStateFlow()
 
      fun getFavoriteProducts() {
         viewModelScope.launch(Dispatchers.IO) {
-            try {
-                val favoriteList = repository.getProducts()
-                favoriteList.collect {
-                    mutableFavorites.postValue(it)
-                }
+            val favoriteList = repository.getProducts()
+                .catch { e -> _mutableMessage.value = "Error loading favorites: ${e.message}" }
+            favoriteList.collect {
+                _mutableFavorites.value = it
                 Log.i("ViewModel", "Fetched from Database: $favoriteList")
-
-            } catch (e: Exception) {
-                mutableMessage.postValue("Error loading favorites: ${e.message}")
             }
         }
     }
@@ -40,10 +40,10 @@ class FavoriteViewModel  (private val repository: ProductsRepository ) : ViewMod
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 repository.deleteProduct(product)
-                getFavoriteProducts() // Refresh favorites list
-                mutableMessage.postValue("Removed from favorites")
+              //  getFavoriteProducts() // Refresh favorites list
+                _mutableMessage.value=("Removed from favorites")
             } catch (e: Exception) {
-                mutableMessage.postValue("Failed to remove product: ${e.message}")
+                _mutableMessage.value=("Failed to remove product: ${e.message}")
             }
         }
     }

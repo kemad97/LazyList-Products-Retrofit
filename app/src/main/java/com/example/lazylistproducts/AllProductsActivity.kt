@@ -15,6 +15,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Observer
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.rememberAsyncImagePainter
 import coil.compose.rememberImagePainter
@@ -41,7 +42,7 @@ class AllProductsActivity : ComponentActivity() {
                 viewModel.fetchProductsFromApi()
             }
 
-            val products = viewModel.products.observeAsState(emptyList())
+            val products = viewModel.products.collectAsStateWithLifecycle(emptyList())
             ProductListScreen(products.value, this,viewModel)
 
         }

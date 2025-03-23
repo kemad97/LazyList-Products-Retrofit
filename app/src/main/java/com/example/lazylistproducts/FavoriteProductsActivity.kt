@@ -30,6 +30,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.rememberImagePainter
 import com.example.lazylistproducts.local.ProductDatabase
@@ -49,12 +50,11 @@ class FavoriteProductsActivity : ComponentActivity() {
 
         setContent {
             val viewModel: FavoriteViewModel = viewModel(factory = factory)
-            val favoriteProducts by viewModel.favorites.observeAsState(emptyList())
+            val favoriteProducts by viewModel.favorites.collectAsStateWithLifecycle(emptyList())
 
             LaunchedEffect(Unit) {
                 viewModel.getFavoriteProducts()
             }
-
 
                 FavoriteProductsScreen(favoriteProducts, viewModel)
         }

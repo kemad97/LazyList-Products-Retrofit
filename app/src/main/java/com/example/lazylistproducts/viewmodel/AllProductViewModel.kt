@@ -9,28 +9,33 @@ import androidx.lifecycle.viewModelScope
 import com.example.lazylistproducts.model.Product
 import com.example.lazylistproducts.repo.ProductsRepository
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.launch
 
 class AllProductViewModel (private val repository: ProductsRepository) : ViewModel ()
 {
-    private val mutableProducts : MutableLiveData <List <Product>> = MutableLiveData()
-    val products : LiveData <List <Product>> = mutableProducts
+    private val mutableProducts =MutableStateFlow<List<Product>>  (emptyList() )
+    val products : StateFlow<List<Product>> = mutableProducts
 
     private val mutableMessage : MutableLiveData<String> = MutableLiveData("")
-    val message : LiveData<String>  = mutableMessage
+
+    init {
+        fetchProductsFromApi()
+    }
 
     fun fetchProductsFromApi() {
         viewModelScope.launch (Dispatchers.IO){
-            try {
-                val productList = repository.fetchProductsFromApi()
-                mutableProducts.postValue(productList)
-                Log.i("ViewModel", "Fetched from API: ${productList.size}")
 
-            }
-            catch (e:Exception)
-            {
-                mutableMessage.postValue("Failed to load products: ${e.message}")
-            }
+                val productList = repository.fetchProductsFromApi()
+                    productList
+                    .catch { e -> mutableMessage.postValue("Error fetching products: ${e.message}") }
+                   .collect{
+                        mutableProducts.value = it
+                        Log.i("ViewModel", "Fetched from API: $productList")
+                    }
+
 
         }
     }
